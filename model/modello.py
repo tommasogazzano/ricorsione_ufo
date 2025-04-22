@@ -56,6 +56,69 @@ class Model:
         self._score_ottimo = 0
 
         #TODO
+        for node in self._grafo.nodes():
+            parziale = [node]
+            rimanenti = self.calcola_rimanenti(parziale)
+            self._ricorsione(parziale, rimanenti)
 
         return self._cammino_ottimo, self._score_ottimo
 
+
+    def _ricorsione(self, parziale, nodi_rimanenti):
+        #caso terminale
+        if len(nodi_rimanenti) == 0:  #condizione terminale --> nessun altro nodo da analizzare
+            punteggio = self.calcola_punteggio(parziale)
+            if punteggio > self._score_ottimo:
+                self._score_ottimo = punteggio
+                self._cammino_ottimo = copy.deepcopy(parziale)
+            #print(parziale)
+
+        #caso ricorsivo
+        else:
+            # per ogni nodo rimanente
+            for nodo in nodi_rimanenti:
+                # 1) aggiungere il nodo
+                parziale.append(nodo)
+                # 2) calcolare i nuovi rimanenti di questo nodo
+                nuovi_rimanenti = self.calcola_rimanenti(parziale)
+                # 3) andare avanti nella ricorsione
+                self._ricorsione(parziale, nuovi_rimanenti)
+                # 4) ricorsione
+                parziale.pop()
+            pass
+
+    def calcola_rimanenti(self, parziale):
+        nuovi_rimanenti = []
+        #prendiamo i nodi successivi
+        for i in self._grafo.successors(parziale[-1]):
+            # di questi nodi dobbiamo verificare il vincolo sul mese
+            if self.verifica_vincolo(parziale, i) and self.verifica_durata(parziale, i):
+                nuovi_rimanenti.append(i)
+        return nuovi_rimanenti
+
+    def verifica_vincolo(self, parziale, nodo:Sighting):
+        mese = nodo.datetime.month
+        counter = 0
+        for i in parziale:
+            if i.datetime.month == mese:
+                counter += 1
+        if counter >= 3:
+            return False
+        else:
+            return True
+
+    def verifica_durata(self, parziale, nodo:Sighting):
+        return nodo.duration > parziale[-1].duration
+
+    def calcola_punteggio(self, parziale):
+        punteggio = 0
+        #termine fisso
+        punteggio += 100*len(parziale)
+        #termine variabile
+        for i in range(1, len(parziale)):
+            nodo = parziale[i]
+            nodo_precedente = parziale[i-1]
+            if  nodo.datetime.month == nodo_precedente.datetime.month:
+                punteggio +=200
+        #return
+        return punteggio
